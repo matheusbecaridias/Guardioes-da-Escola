@@ -1,0 +1,1054 @@
+import Phaser from "phaser";
+import {
+  carregarPerfilAtivo,
+  salvarPerfil,
+} from "../data/ProfileRepository.js";
+import { ChoiceService } from "../services/ChoiceService.js";
+import { ProgressionService } from "../services/ProgressionService.js";
+import { EndingService } from "../services/EndingService.js";
+import Player, { prepararPersonagens } from "../entities/Player.js";
+import { ChoiceDialog } from "../ui/ChoiceDialog.js";
+import { HUD } from "../ui/HUD.js";
+import { InteractionPrompt } from "../ui/InteractionPrompt.js";
+import { CHALK_TEXTURES, criarBotaoGiz } from "../ui/ChalkButton.js";
+import { pixelTextStyle } from "../ui/TextStyles.js";
+import { GAMEPLAY_AREA } from "../data/gameplayLayout.js";
+import { CHARACTER_FRAME_ASSETS } from "../data/charactersData.js";
+import { CharacterService } from "../services/CharacterService.js";
+import {
+  criarMalhaNavegacao,
+  encontrarCaminhoAteInteracao,
+  encontrarCaminhoAtePonto,
+  NAVIGATION_CELL_SIZE,
+} from "../services/NavigationService.js";
+import { SoundService } from "../services/SoundService.js";
+
+const SALA_PADRAO = GAMEPLAY_AREA;
+
+const ASSETS_INTERACOES = [
+  ["interaction-sign", "assets/images/PlacaInteragir.png"],
+  ["interaction-board", "assets/images/QuadroInteracoes.png"],
+  ["interaction-chalk-blue", "assets/images/BotaoGizAzul.png"],
+  ["interaction-chalk-orange", "assets/images/BotaoGizLaranja.png"],
+  ["interaction-chalk-pink", "assets/images/BotaoGizRosa.png"],
+];
+
+const ASSETS_HUD = [
+  ["stage-hud-board", "assets/images/QuadroLargo.png"],
+  ["stage-hud-button-phases", "assets/images/BotaoGizAzul.png"],
+];
+
+/**
+ * Infraestrutura compartilhada pelas fases jogáveis da campanha.
+ * As subclasses fornecem somente a configuração e o tema da fase.
+ */
+export class BaseStageScene extends Phaser.Scene {
+  constructor(chaveCena) {
+    super(chaveCena);
+  }
+
+  getStageConfig() {
+    throw new Error("A cena precisa fornecer getStageConfig().");
+  }
+
+  preload() {
+    [...ASSETS_INTERACOES, ...ASSETS_HUD].forEach(([chave, caminho]) => {
+      if (!this.textures.exists(chave)) {
+        this.load.image(chave, caminho);
+      }
+    });
+
+    Object.values(CHARACTER_FRAME_ASSETS)
+      .flat()
+      .forEach(({ sourceKey, path }) => {
+        if (!this.textures.exists(sourceKey)) {
+          this.load.image(sourceKey, path);
+        }
+      });
+  }
+
+  init(data) {
+    this.perfil = data?.perfil || carregarPerfilAtivo();
+    this.stageConfig = this.getStageConfig();
+  }
+
+  create() {
+    if (!this.perfil) {
+      this.scene.start("MainMenuScene");
+      return;
+    }
+
+    if (
+      !this.stageConfig ||
+      !ProgressionService.podeAcessarFase(
+        this.perfil,
+        this.stageConfig.numeroFase,
+      )
+    ) {
+      this.scene.start("StageSelectScene", {
+        perfil: this.perfil,
+        aviso: `A Fase ${this.stageConfig?.numeroFase || "selecionada"} está bloqueada.`,
+      });
+      return;
+    }
+
+    if (!CharacterService.isPlayableCharacterId(this.perfil.personagemId)) {
+      this.scene.start("ProfileScene", {
+        perfil: this.perfil,
+        aviso: "Escolha um personagem antes de iniciar uma fase.",
+      });
+      return;
+    }
+    prepararPersonagens(this, this.perfil.personagemId);
+
+    this.interacaoVisuais = new Map();
+    this.conclusaoAberta = false;
+    this.portaLiberada = false;
+    this.finalizacaoEmAndamento = false;
+
+    this.desenharSala();
+    this.hud = new HUD(
+      this,
+      this.perfil,
+      this.stageConfig.interacoesObrigatorias,
+      this.stageConfig.objetivo,
+      this.stageConfig.exibirDanos === true,
+      () => this.scene.start("StageSelectScene", { perfil: this.perfil }),
+    );
+    this.criarObjetosInterativos();
+
+    const inicio = this.stageConfig.jogadorInicial || { x: 230, y: 380 };
+    this.player = new Player(
+      this,
+      inicio.x,
+      inicio.y,
+      this.perfil.personagemId,
+    );
+    const sala = { ...SALA_PADRAO, ...(this.stageConfig.sala || {}) };
+    this.physics.world.setBounds(sala.x, sala.y, sala.width, sala.height);
+    this.player.body.setCollideWorldBounds(true);
+
+    this.interactKey = this.input.keyboard.addKey(
+      Phaser.Input.Keyboard.KeyCodes.E,
+    );
+    this.escapeKey = this.input.keyboard.addKey(
+      Phaser.Input.Keyboard.KeyCodes.ESC,
+    );
+
+    this.interactionPrompt = new InteractionPrompt(this, 0, 0);
+    this.choiceDialog = new ChoiceDialog(this);
+    this.interacaoAutomaticaId = null;
+    this.aoClicarNaFase = this.aoClicarNaFase.bind(this);
+    this.input.on(Phaser.Input.Events.POINTER_DOWN, this.aoClicarNaFase);
+    this.player.on("autopathcancelled", () => {
+      this.interacaoAutomaticaId = null;
+    });
+
+    this.statusText = this.add
+      .text(
+        640,
+        685,
+        "WASD/setas: mover • toque/clique: caminhar e interagir • E: interagir",
+        pixelTextStyle({
+          fontSize: "18px",
+          align: "center",
+          wordWrap: { width: 1120, useAdvancedWrap: true },
+        }),
+      )
+      .setOrigin(0.5)
+      .setDepth(20);
+
+    this.criarModalConclusao();
+    this.atualizarEstadoInteracoes();
+
+    if (this.progressoFase.faseConcluida) {
+      this.liberarPortaSaida();
+    }
+
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, this.limparRecursos, this);
+  }
+
+  reconstruirMalhaNavegacao() {
+    const limites = this.physics.world.bounds;
+    const colisores = this.children.list
+      .filter((objeto) => objeto.colisaoId && objeto.body?.enable !== false)
+      .map(({ body }) => ({
+        x: body.x,
+        y: body.y,
+        width: body.width,
+        height: body.height,
+      }));
+
+    this.navigationGrid = criarMalhaNavegacao(limites, colisores, {
+      cellSize: NAVIGATION_CELL_SIZE,
+      actorWidth: this.player.body.width,
+      actorHeight: this.player.body.height,
+    });
+    this.navigationGridBuildCount = (this.navigationGridBuildCount || 0) + 1;
+    return this.navigationGrid;
+  }
+
+  aoClicarNaFase(pointer, objetosSobPonteiro = []) {
+    if (
+      !this.player ||
+      !this.navigationGrid ||
+      this.choiceDialog?.isOpen ||
+      this.conclusaoAberta ||
+      objetosSobPonteiro.some((objeto) => objeto?.input?.enabled)
+    ) {
+      return;
+    }
+
+    const ponto = pointer.positionToCamera(this.cameras.main);
+    const limites = this.physics.world.bounds;
+    if (
+      ponto.x < limites.x ||
+      ponto.x > limites.right ||
+      ponto.y < limites.y ||
+      ponto.y > limites.bottom
+    ) {
+      return;
+    }
+
+    this.interacaoAutomaticaId = null;
+    this.player.cancelarCaminhoAutomatico({ avisar: false });
+
+    const interacaoAlvo = this.localizarInteracaoClicada(ponto);
+    if (interacaoAlvo) {
+      if (ChoiceService.interacaoConcluida(this.perfil, interacaoAlvo.id)) {
+        return;
+      }
+
+      const posicaoInteracao = this.player.getInteractionPosition();
+      const distanciaAtual = Phaser.Math.Distance.Between(
+        posicaoInteracao.x,
+        posicaoInteracao.y,
+        interacaoAlvo.x,
+        interacaoAlvo.y,
+      );
+      if (distanciaAtual <= interacaoAlvo.raioInteracao) {
+        this.player.limparTeclasDirecionais();
+        this.abrirEscolha(interacaoAlvo);
+        return;
+      }
+
+      const caminho = encontrarCaminhoAteInteracao(
+        this.navigationGrid,
+        { x: this.player.x, y: this.player.y },
+        interacaoAlvo,
+        interacaoAlvo.raioInteracao,
+        this.player.displayHeight / 2,
+      );
+      if (!caminho || caminho.length === 0) {
+        this.statusText.setText("Não há um caminho seguro até essa interação.");
+        return;
+      }
+
+      this.interacaoAutomaticaId = interacaoAlvo.id;
+      this.player.definirCaminhoAutomatico(caminho);
+      return;
+    }
+
+    const caminho = encontrarCaminhoAtePonto(
+      this.navigationGrid,
+      { x: this.player.x, y: this.player.y },
+      ponto,
+    );
+    if (caminho?.length) {
+      this.player.definirCaminhoAutomatico(caminho);
+    }
+  }
+
+  localizarInteracaoClicada(ponto) {
+    const candidatas = this.stageConfig.interacoes
+      .map((interacao) => ({
+        interacao,
+        distancia: Phaser.Math.Distance.Between(
+          ponto.x,
+          ponto.y,
+          interacao.x,
+          interacao.y,
+        ),
+        raioClique: Phaser.Math.Clamp(interacao.raioInteracao * 0.45, 36, 68),
+      }))
+      .filter(({ distancia, raioClique }) => distancia <= raioClique)
+      .sort((a, b) => a.distancia - b.distancia);
+
+    return candidatas[0]?.interacao || null;
+  }
+
+  desenharSala() {
+    const salaConfig = { ...SALA_PADRAO, ...(this.stageConfig.sala || {}) };
+    this.add.rectangle(640, 360, 1280, 720, 0x081a2d, 1).setDepth(-3);
+
+    const sala = this.add.graphics().setDepth(-2);
+    sala.fillStyle(salaConfig.backgroundColor || 0x163b4d, 1);
+    sala.fillRect(
+      salaConfig.x,
+      salaConfig.y,
+      salaConfig.width,
+      salaConfig.height,
+    );
+    sala.lineStyle(5, salaConfig.borderColor || 0x7ed6df, 1);
+    sala.strokeRect(
+      salaConfig.x,
+      salaConfig.y,
+      salaConfig.width,
+      salaConfig.height,
+    );
+    sala.lineStyle(1, salaConfig.gridColor || 0x2b5f70, 1);
+
+    if (salaConfig.linhasHorizontais) {
+      for (
+        let y = salaConfig.y + 45;
+        y < salaConfig.y + salaConfig.height;
+        y += 55
+      ) {
+        sala.lineBetween(salaConfig.x, y, salaConfig.x + salaConfig.width, y);
+      }
+      for (
+        let x = salaConfig.x + 120;
+        x < salaConfig.x + salaConfig.width;
+        x += 160
+      ) {
+        sala.lineBetween(x, salaConfig.y, x, salaConfig.y + salaConfig.height);
+      }
+    } else {
+      for (
+        let x = salaConfig.x + 40;
+        x < salaConfig.x + salaConfig.width;
+        x += 80
+      ) {
+        sala.lineBetween(x, salaConfig.y, x, salaConfig.y + salaConfig.height);
+      }
+      for (
+        let y = salaConfig.y + 40;
+        y < salaConfig.y + salaConfig.height;
+        y += 80
+      ) {
+        sala.lineBetween(salaConfig.x, y, salaConfig.x + salaConfig.width, y);
+      }
+    }
+
+    this.add
+      .text(
+        80,
+        127,
+        this.stageConfig.cabecalho,
+        pixelTextStyle({
+          fontSize: this.stageConfig.numeroFase === 2 ? "23px" : "25px",
+          fontStyle: "bold",
+        }),
+      )
+      .setDepth(10);
+
+    this.add
+      .text(
+        salaConfig.destaqueX || 180,
+        salaConfig.destaqueY || 255,
+        salaConfig.destaque || "",
+        pixelTextStyle({
+          fontSize: "18px",
+          align: "center",
+          fontStyle: "bold",
+        }),
+      )
+      .setOrigin(0.5)
+      .setDepth(1);
+  }
+
+  criarObjetosInterativos() {
+    this.stageConfig.interacoes.forEach((interacao) => {
+      this.interacaoVisuais.set(
+        interacao.id,
+        this.criarVisualInteracao(interacao),
+      );
+    });
+  }
+
+  criarVisualInteracao(interacao) {
+    const grupo = this.add.container(interacao.x, interacao.y).setDepth(4);
+    const visual = { grupo, tipo: interacao.visual };
+
+    if (interacao.visual === "computador") {
+      const mesa = this.add
+        .rectangle(0, 72, 330, 105, 0x7b533d, 1)
+        .setStrokeStyle(4, 0xd29b65, 1);
+      const suporte = this.add.rectangle(0, 23, 24, 55, 0xd29b65, 1);
+      const moldura = this.add
+        .rectangle(0, -25, 170, 112, 0x0b1728, 1)
+        .setStrokeStyle(5, 0x9fe6e5, 1);
+      const tela = this.add
+        .rectangle(0, -25, 146, 88, 0x206f83, 1)
+        .setStrokeStyle(2, 0xc6f5ef, 1);
+      const estado = this.add
+        .text(
+          0,
+          -25,
+          "ON",
+          pixelTextStyle({
+            fontSize: "28px",
+            fontStyle: "bold",
+          }),
+        )
+        .setOrigin(0.5);
+      const base = this.add.rectangle(0, 45, 95, 10, 0x0b1728, 1);
+      const luz = this.add.circle(70, -70, 7, 0x86f7a5, 1);
+
+      grupo.add([mesa, suporte, moldura, tela, estado, base, luz]);
+      visual.tela = tela;
+      visual.estado = estado;
+      visual.luz = luz;
+      visual.rotuloY = 112;
+      visual.statusY = 145;
+    } else if (interacao.visual === "lixo") {
+      const sombra = this.add.ellipse(0, 34, 125, 28, 0x071522, 0.5);
+      const saco = this.add
+        .ellipse(0, 0, 112, 95, 0x5e6870, 1)
+        .setStrokeStyle(3, 0xb7c4c9, 1);
+      const abertura = this.add.rectangle(0, -35, 78, 13, 0x303a42, 1);
+      const papelUm = this.add
+        .rectangle(-37, 5, 24, 16, 0xf1e4bc, 1)
+        .setAngle(-18);
+      const papelDois = this.add
+        .rectangle(40, -2, 20, 14, 0xe8d7a4, 1)
+        .setAngle(22);
+
+      grupo.add([sombra, saco, abertura, papelUm, papelDois]);
+      visual.base = saco;
+      visual.acento = abertura;
+      visual.rotuloY = 78;
+      visual.statusY = 110;
+    } else if (interacao.visual === "equipamento") {
+      const sombra = this.add.ellipse(0, 45, 175, 28, 0x071522, 0.5);
+      const caixa = this.add
+        .rectangle(0, 12, 145, 82, 0xc28545, 1)
+        .setStrokeStyle(4, 0xf1c27d, 1);
+      const tampa = this.add
+        .rectangle(0, -38, 168, 25, 0xe1a15d, 1)
+        .setStrokeStyle(3, 0xf8d39a, 1);
+      const faixa = this.add.rectangle(0, 12, 16, 82, 0x8b552f, 1);
+      const etiqueta = this.add
+        .text(
+          0,
+          12,
+          "MATERIAL",
+          pixelTextStyle({
+            fontSize: "15px",
+            fontStyle: "bold",
+          }),
+        )
+        .setOrigin(0.5);
+
+      grupo.add([sombra, caixa, tampa, faixa, etiqueta]);
+      visual.base = caixa;
+      visual.acento = tampa;
+      visual.rotuloY = 80;
+      visual.statusY = 112;
+    } else if (interacao.visual === "liquido") {
+      const sombra = this.add.ellipse(0, 35, 180, 28, 0x071522, 0.5);
+      const poça = this.add
+        .ellipse(0, 8, 170, 76, 0x42b7c8, 0.95)
+        .setStrokeStyle(3, 0x9ce9e8, 1);
+      const sinal = this.add
+        .rectangle(0, -50, 86, 24, 0xe1ad4c, 1)
+        .setStrokeStyle(2, 0xffe7a3, 1);
+      const alerta = this.add
+        .text(
+          0,
+          -50,
+          "ATENÇÃO",
+          pixelTextStyle({
+            fontSize: "12px",
+            fontStyle: "bold",
+          }),
+        )
+        .setOrigin(0.5);
+
+      grupo.add([sombra, poça, sinal, alerta]);
+      visual.base = poça;
+      visual.acento = sinal;
+      visual.extra = alerta;
+      visual.rotuloY = 70;
+      visual.statusY = 102;
+    } else if (interacao.visual === "maquina") {
+      const sombra = this.add.ellipse(0, 54, 190, 30, 0x071522, 0.5);
+      const gabinete = this.add
+        .rectangle(0, 0, 145, 155, 0x657987, 1)
+        .setStrokeStyle(4, 0xc5d4db, 1);
+      const painel = this.add
+        .rectangle(0, -28, 94, 55, 0x183848, 1)
+        .setStrokeStyle(3, 0x9fe6e5, 1);
+      const visor = this.add.rectangle(0, -28, 72, 34, 0x287d88, 1);
+      const botao = this.add
+        .circle(0, 37, 13, 0xf0b44d, 1)
+        .setStrokeStyle(3, 0xffe7a3, 1);
+      const base = this.add.rectangle(0, 83, 180, 16, 0x334653, 1);
+
+      grupo.add([sombra, gabinete, painel, visor, botao, base]);
+      visual.base = gabinete;
+      visual.acento = visor;
+      visual.rotuloY = 112;
+      visual.statusY = 144;
+    } else if (interacao.visual === "responsavel") {
+      const sombra = this.add.ellipse(0, 45, 150, 25, 0x071522, 0.5);
+      const corpo = this.add
+        .rectangle(0, 10, 62, 82, 0x5377a1, 1)
+        .setStrokeStyle(3, 0xc4e6ff, 1);
+      const cabeca = this.add.circle(0, -48, 24, 0xe0a477, 1);
+      const prancheta = this.add
+        .rectangle(41, 15, 32, 42, 0xf0d58a, 1)
+        .setStrokeStyle(2, 0xffefbd, 1);
+      const orientacao = this.add
+        .text(
+          0,
+          -83,
+          "ORIENTAÇÃO",
+          pixelTextStyle({
+            fontSize: "13px",
+            fontStyle: "bold",
+          }),
+        )
+        .setOrigin(0.5);
+
+      grupo.add([sombra, corpo, cabeca, prancheta, orientacao]);
+      visual.base = corpo;
+      visual.acento = prancheta;
+      visual.rotuloY = 78;
+      visual.statusY = 110;
+    } else {
+      const sombra = this.add.ellipse(0, 45, 180, 28, 0x071522, 0.5);
+      const colegaUm = this.add
+        .rectangle(-42, 12, 34, 76, 0xc86a68, 1)
+        .setStrokeStyle(3, 0xffc4b5, 1);
+      const colegaDois = this.add
+        .rectangle(42, 12, 34, 76, 0x68a9d4, 1)
+        .setStrokeStyle(3, 0xc4e6ff, 1);
+      const cabecaUm = this.add.circle(-42, -35, 22, 0xf0b44d, 1);
+      const cabecaDois = this.add.circle(42, -35, 22, 0xe0a477, 1);
+      const dialogo = this.add
+        .rectangle(0, -76, 104, 24, 0xf4ffff, 1)
+        .setStrokeStyle(2, 0x9fe6e5, 1);
+
+      grupo.add([sombra, colegaUm, colegaDois, cabecaUm, cabecaDois, dialogo]);
+      visual.base = colegaUm;
+      visual.acento = colegaDois;
+      visual.rotuloY = 78;
+      visual.statusY = 110;
+    }
+
+    const rotulo = this.add
+      .text(
+        0,
+        visual.rotuloY,
+        interacao.label || interacao.visual.toUpperCase(),
+        pixelTextStyle({
+          fontSize: "19px",
+          fontStyle: "bold",
+        }),
+      )
+      .setOrigin(0.5);
+    const status = this.add
+      .text(
+        0,
+        visual.statusY,
+        "✓ RESOLVIDO",
+        pixelTextStyle(
+          {
+            color: "#9ff5b5",
+            fontSize: "16px",
+            fontStyle: "bold",
+          },
+          { preservarCor: true },
+        ),
+      )
+      .setOrigin(0.5)
+      .setVisible(false);
+
+    grupo.add([rotulo, status]);
+    visual.status = status;
+    return visual;
+  }
+
+  criarModalConclusao() {
+    const quadroTextura = this.textures
+      .get(CHALK_TEXTURES.board)
+      .getSourceImage();
+    const larguraQuadro = Math.min(900, this.cameras.main.width * 0.76);
+    const alturaQuadro =
+      larguraQuadro * (quadroTextura.height / quadroTextura.width);
+
+    this.conclusaoOverlay = this.add
+      .rectangle(640, 360, 1280, 720, 0x000000, 0.72)
+      .setDepth(60)
+      .setInteractive();
+    this.conclusaoPanel = this.add
+      .image(640, 360, CHALK_TEXTURES.board)
+      .setDisplaySize(larguraQuadro, alturaQuadro)
+      .setDepth(61);
+    this.conclusaoTitulo = this.add
+      .text(
+        640,
+        258,
+        this.stageConfig.tituloConclusao || "FASE CONCLUÍDA",
+        pixelTextStyle({
+          fontSize: "38px",
+          align: "center",
+          wordWrap: { width: 660 },
+        }),
+      )
+      .setOrigin(0.5)
+      .setDepth(62);
+    this.conclusaoMensagem = this.add
+      .text(
+        640,
+        350,
+        this.stageConfig.mensagemConclusao,
+        pixelTextStyle({
+          fontSize: "22px",
+          align: "center",
+          lineSpacing: 5,
+          wordWrap: { width: 660, useAdvancedWrap: true },
+        }),
+      )
+      .setOrigin(0.5)
+      .setDepth(62);
+    // Em BaseStageScene.js, no criarModalConclusao():
+
+    this.finalizarButton = criarBotaoGiz(this, {
+      x: 640,
+      y: 458,
+      label: this.stageConfig.botaoConclusao || "FINALIZAR FASE",
+      color: "blue",
+      width: 370,
+      fontSize: "21px",
+      onClick: () => this.finalizarFase(),
+    });
+
+    this.finalizarButton.setDepth(62);
+
+    this.conclusaoElements = [
+      this.conclusaoOverlay,
+      this.conclusaoPanel,
+      this.conclusaoTitulo,
+      this.conclusaoMensagem,
+      this.finalizarButton.container,
+    ];
+    this.ocultarConclusao();
+  }
+
+  ocultarConclusao() {
+    this.conclusaoElements?.forEach((element) => element.setVisible(false));
+    this.finalizarButton?.setButtonVisible(false);
+  }
+
+  liberarPortaSaida() {
+    if (this.portaLiberada || this.conclusaoAberta) return;
+
+    SoundService.tocarConclusao(this);
+    const porta = this.stageConfig.porta;
+    if (!porta || (!porta.x && !porta.y)) {
+      this.mostrarConclusao(); // porta ainda não configurada: comportamento antigo
+      return;
+    }
+
+    this.portaLiberada = true;
+    this.statusText.setText(
+      `${this.statusText.text}\nFase concluída! Vá até a porta para sair.`,
+    );
+
+    const seta = this.add
+      .text(
+        porta.x,
+        porta.y - 60,
+        "▼ SAÍDA",
+        pixelTextStyle({ fontSize: "20px", align: "center" }),
+      )
+      .setOrigin(0.5)
+      .setDepth(15);
+    this.tweens.add({
+      targets: seta,
+      y: "+=10",
+      yoyo: true,
+      repeat: -1,
+      duration: 500,
+    });
+  }
+
+  mostrarConclusao() {
+    if (this.conclusaoAberta || this.finalizacaoEmAndamento) {
+      return;
+    }
+
+    if (!this.progressoFase?.faseConcluida) {
+      return;
+    }
+
+    this.conclusaoAberta = true;
+    this.player?.parar();
+    this.interactionPrompt?.hide();
+    this.conclusaoElements.forEach((element) => element.setVisible(true));
+    this.finalizarButton.setButtonVisible(true);
+  }
+
+  finalizarFase() {
+    if (!this.conclusaoAberta || this.finalizacaoEmAndamento) {
+      return;
+    }
+
+    this.finalizacaoEmAndamento = true;
+    const resultado = ProgressionService.concluirFase(
+      this.perfil,
+      this.stageConfig.numeroFase,
+    );
+
+    if (resultado?.sucesso === false) {
+      this.finalizacaoEmAndamento = false;
+      this.statusText.setText(
+        resultado.erro || "Não foi possível concluir a fase.",
+      );
+      return;
+    }
+
+    this.perfil = resultado;
+    if (this.stageConfig.numeroFase === 3) {
+      const desfecho = EndingService.calcularDesfecho(this.perfil);
+      this.perfil.desfecho = desfecho.id;
+      this.perfil = salvarPerfil(this.perfil);
+      this.scene.start("EndingScene", { perfil: this.perfil });
+      return;
+    }
+
+    this.perfil = salvarPerfil(this.perfil);
+    this.scene.start("StageResultScene", {
+      perfil: this.perfil,
+      stageNumber: this.stageConfig.numeroFase,
+    });
+  }
+
+  obterEscolhaDaInteracao(interacao) {
+    const escolhas = Array.isArray(this.perfil?.escolhasRealizadas)
+      ? this.perfil.escolhasRealizadas
+      : [];
+
+    return escolhas
+      .map((registro) =>
+        typeof registro === "string" ? registro : registro?.choiceId,
+      )
+      .find((choiceId) =>
+        interacao.opcoes.some((opcao) => opcao.choiceId === choiceId),
+      );
+  }
+
+  atualizarVisualInteracao(interacao) {
+    const visual = this.interacaoVisuais.get(interacao.id);
+    const resolvida = ChoiceService.interacaoConcluida(
+      this.perfil,
+      interacao.id,
+    );
+    const escolha = this.obterEscolhaDaInteracao(interacao);
+    const escolhaPositiva = escolha === interacao.opcoes[0].choiceId;
+
+    visual.status.setVisible(resolvida);
+
+    if (interacao.visual === "computador") {
+      visual.luz.setFillStyle(
+        !resolvida ? 0x86f7a5 : escolhaPositiva ? 0x9ca7ad : 0xffb85c,
+      );
+      visual.tela.setFillStyle(
+        !resolvida ? 0x206f83 : escolhaPositiva ? 0x344c58 : 0x206f83,
+      );
+      visual.estado.setText(!resolvida ? "ON" : escolhaPositiva ? "OFF" : "ON");
+      return;
+    }
+
+    if (interacao.visual === "maquina") {
+      visual.base.setFillStyle(
+        !resolvida ? 0x657987 : escolhaPositiva ? 0x287d5b : 0x80533b,
+      );
+      visual.acento.setFillStyle(
+        !resolvida ? 0x287d88 : escolhaPositiva ? 0x52b87e : 0x9e6846,
+      );
+      return;
+    }
+
+    if (resolvida) {
+      visual.base?.setFillStyle(escolhaPositiva ? 0x287d5b : 0x80533b);
+      visual.acento?.setFillStyle(escolhaPositiva ? 0x52b87e : 0x9e6846);
+      visual.extra?.setAlpha(0.45);
+    } else {
+      const cores = {
+        lixo: [0x5e6870, 0x303a42],
+        equipamento: [0xc28545, 0xe1a15d],
+        liquido: [0x42b7c8, 0xe1ad4c],
+        respeito: [0xc86a68, 0x68a9d4],
+        colegas: [0xc86a68, 0x68a9d4],
+        responsavel: [0x5377a1, 0xf0d58a],
+      }[interacao.visual] || [0x5e6870, 0x303a42];
+      visual.base?.setFillStyle(cores[0]);
+      visual.acento?.setFillStyle(cores[1]);
+      visual.extra?.setAlpha(1);
+    }
+  }
+
+  atualizarEstadoInteracoes() {
+    this.stageConfig.interacoes.forEach((interacao) => {
+      this.atualizarVisualInteracao(interacao);
+    });
+    this.progressoFase = ChoiceService.obterProgressoFase(
+      this.perfil,
+      this.stageConfig.interacoesObrigatorias,
+    );
+    this.hud.update(this.perfil);
+  }
+
+  obterInteracaoAtiva() {
+    const posicaoJogador = this.player.getInteractionPosition();
+
+    return this.stageConfig.interacoes.find((interacao) => {
+      if (ChoiceService.interacaoConcluida(this.perfil, interacao.id)) {
+        return false;
+      }
+
+      return (
+        Phaser.Math.Distance.Between(
+          posicaoJogador.x,
+          posicaoJogador.y,
+          interacao.x,
+          interacao.y,
+        ) <= interacao.raioInteracao
+      );
+    });
+  }
+
+  abrirEscolha(interacao) {
+    if (!interacao || this.choiceDialog.isOpen) {
+      return;
+    }
+
+    if (ChoiceService.interacaoConcluida(this.perfil, interacao.id)) {
+      return;
+    }
+
+    this.interacaoAutomaticaId = null;
+    this.player?.cancelarCaminhoAutomatico({ avisar: false });
+    this.player?.limparTeclasDirecionais();
+
+    SoundService.tocarInteracaoPrompt(this); // <-- Som ao interagir com o objeto
+
+    this.choiceDialog.show({
+      titulo: interacao.titulo,
+      mensagem: interacao.mensagem,
+      opcoes: interacao.opcoes,
+      onChoice: (choiceId) => this.registrarEscolha(choiceId),
+    });
+  }
+
+  registrarEscolha(choiceId) {
+    const resultado = ChoiceService.registrarEscolha(this.perfil, choiceId);
+
+    if (!resultado.sucesso) {
+      this.statusText.setText(resultado.erro);
+      this.atualizarEstadoInteracoes();
+      return;
+    }
+
+    // Feedback sonoro baseado no impacto da decisão
+    const ehPositiva =
+      (resultado.impacto.cuidado > 0 || resultado.impacto.conduta > 0) &&
+      resultado.impacto.danos === 0;
+    if (ehPositiva) {
+      SoundService.tocarEscolhaPositiva(this);
+    } else {
+      SoundService.tocarEscolhaNegativa(this);
+    }
+
+    this.perfil = salvarPerfil(resultado.perfil);
+    this.atualizarEstadoInteracoes();
+
+    const impacto = resultado.impacto;
+    const cuidado =
+      impacto.cuidado >= 0 ? `+${impacto.cuidado}` : `${impacto.cuidado}`;
+    const conduta =
+      impacto.conduta >= 0 ? `+${impacto.conduta}` : `${impacto.conduta}`;
+    const danos = impacto.danos >= 0 ? `+${impacto.danos}` : `${impacto.danos}`;
+    this.statusText.setText(
+      `${resultado.mensagem}\n${cuidado} cuidado  •  ${conduta} conduta` +
+        (this.stageConfig.exibirDanos ? `  •  ${danos} danos` : "") +
+        `\nAgora: Cuidado ${this.perfil.pontuacao.cuidado}  •  Conduta ${this.perfil.pontuacao.conduta}` +
+        (this.stageConfig.exibirDanos
+          ? `  •  Danos ${this.perfil.pontuacao.danos}`
+          : ""),
+    );
+
+    if (this.progressoFase.faseConcluida) {
+      this.liberarPortaSaida();
+    }
+  }
+
+  obterPosicaoPrompt(interacao) {
+    const camera = this.cameras.main;
+    const metadeLargura = this.interactionPrompt.width / 2;
+    const metadeAltura = this.interactionPrompt.height / 2;
+    const margem = 10;
+    const jogador = this.player.getBounds();
+    const topoInterface = new Phaser.Geom.Rectangle(0, 0, camera.width, 174);
+    const candidatos = [
+      { x: interacao.x, y: interacao.y - 115 },
+      { x: interacao.x + 155, y: interacao.y },
+      { x: interacao.x - 155, y: interacao.y },
+      { x: interacao.x, y: interacao.y + 115 },
+    ].filter(
+      ({ x, y }) =>
+        x >= metadeLargura + margem &&
+        x <= camera.width - metadeLargura - margem &&
+        y >= metadeAltura + margem &&
+        y <= camera.height - metadeAltura - margem,
+    );
+
+    const areaSobreposta = (a, b) => {
+      const largura = Math.max(
+        0,
+        Math.min(a.right, b.right) - Math.max(a.left, b.left),
+      );
+      const altura = Math.max(
+        0,
+        Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top),
+      );
+      return largura * altura;
+    };
+
+    const pontuar = ({ x, y }) => {
+      const caixa = new Phaser.Geom.Rectangle(
+        x - metadeLargura,
+        y - metadeAltura,
+        this.interactionPrompt.width,
+        this.interactionPrompt.height,
+      );
+      const pontoAlvoCoberto =
+        interacao.x >= caixa.left - 12 &&
+        interacao.x <= caixa.right + 12 &&
+        interacao.y >= caixa.top - 12 &&
+        interacao.y <= caixa.bottom + 12;
+
+      return (
+        areaSobreposta(caixa, jogador) * 10 +
+        areaSobreposta(caixa, topoInterface) * 4 +
+        (pontoAlvoCoberto ? 1_000_000 : 0)
+      );
+    };
+
+    const posicao = candidatos
+      .map((candidato, ordem) => ({
+        ...candidato,
+        ordem,
+        pontuacao: pontuar(candidato),
+      }))
+      .sort((a, b) => a.pontuacao - b.pontuacao || a.ordem - b.ordem)[0];
+
+    return (
+      posicao || {
+        x: Phaser.Math.Clamp(
+          interacao.x,
+          metadeLargura + margem,
+          camera.width - metadeLargura - margem,
+        ),
+        y: Phaser.Math.Clamp(
+          interacao.y - 115,
+          metadeAltura + margem,
+          camera.height - metadeAltura - margem,
+        ),
+      }
+    );
+  }
+
+  update(_time, delta) {
+    if (!this.player || !this.choiceDialog) {
+      return;
+    }
+
+    if (this.conclusaoAberta) {
+      this.player.parar();
+      this.interactionPrompt.hide();
+      return;
+    }
+
+    if (this.choiceDialog.isOpen) {
+      this.player.parar();
+      this.interactionPrompt.hide();
+
+      if (Phaser.Input.Keyboard.JustDown(this.escapeKey)) {
+        this.choiceDialog.close();
+      }
+      return;
+    }
+
+    this.player.update(delta);
+
+    if (this.portaLiberada && !this.conclusaoAberta) {
+      const porta = this.stageConfig.porta;
+      const pos = this.player.getInteractionPosition();
+      if (
+        Phaser.Math.Distance.Between(pos.x, pos.y, porta.x, porta.y) <=
+        porta.raioInteracao
+      ) {
+        this.player.cancelarCaminhoAutomatico({ avisar: false });
+        this.mostrarConclusao();
+        return;
+      }
+    }
+
+    if (this.interacaoAutomaticaId) {
+      const interacaoAutomatica = this.stageConfig.interacoes.find(
+        ({ id }) => id === this.interacaoAutomaticaId,
+      );
+      if (
+        !interacaoAutomatica ||
+        ChoiceService.interacaoConcluida(this.perfil, interacaoAutomatica.id)
+      ) {
+        this.interacaoAutomaticaId = null;
+      } else {
+        const posicao = this.player.getInteractionPosition();
+        const distancia = Phaser.Math.Distance.Between(
+          posicao.x,
+          posicao.y,
+          interacaoAutomatica.x,
+          interacaoAutomatica.y,
+        );
+        if (distancia <= interacaoAutomatica.raioInteracao) {
+          this.interacaoAutomaticaId = null;
+          this.player.cancelarCaminhoAutomatico({ avisar: false });
+          this.abrirEscolha(interacaoAutomatica);
+          return;
+        }
+
+        if (this.player.autoPath.length === 0) {
+          this.interacaoAutomaticaId = null;
+        }
+      }
+    }
+
+    const interacao = this.obterInteracaoAtiva();
+    if (interacao) {
+      const { x, y } = this.obterPosicaoPrompt(interacao);
+      this.interactionPrompt.setPosition(x, y);
+      this.interactionPrompt.show();
+      if (Phaser.Input.Keyboard.JustDown(this.interactKey)) {
+        this.abrirEscolha(interacao);
+      }
+    } else {
+      this.interactionPrompt.hide();
+    }
+  }
+
+  limparRecursos() {
+    this.input.off(Phaser.Input.Events.POINTER_DOWN, this.aoClicarNaFase);
+    this.choiceDialog?.destroy();
+    this.interactionPrompt?.destroy();
+    this.hud?.destroy();
+    this.conclusaoElements?.forEach((element) => element.destroy(true));
+    this.conclusaoElements = [];
+  }
+}
+
+export default BaseStageScene;

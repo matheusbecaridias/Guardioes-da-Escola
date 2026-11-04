@@ -1,0 +1,243 @@
+const FASE1_INTERACOES = [
+  {
+    id: "computador_01",
+    visual: "computador",
+    label: "COMPUTADOR",
+    x: 963,
+    y: 387,
+    raioInteracao: 135,
+    titulo: "Computador",
+    mensagem: "O computador está ligado sem necessidade.\nO que deseja fazer?",
+    opcoes: [
+      { texto: "Desligar corretamente", choiceId: "desligar_computador" },
+      { texto: "Ignorar", choiceId: "ignorar_computador" },
+    ],
+  },
+  {
+    id: "lixo_01",
+    visual: "lixo",
+    label: "LIXO",
+    x: 447,
+    y: 550,
+    raioInteracao: 120,
+    titulo: "Lixo no laboratório",
+    mensagem: "Há lixo no chão do laboratório.\nO que deseja fazer?",
+    opcoes: [
+      { texto: "Colocar na lixeira", choiceId: "recolher_lixo" },
+      { texto: "Deixar onde está", choiceId: "deixar_lixo" },
+    ],
+  },
+  {
+    id: "equipamento_01",
+    visual: "equipamento",
+    label: "EQUIPAMENTO",
+    x: 751,
+    y: 245,
+    raioInteracao: 120,
+    titulo: "Equipamento fora do lugar",
+    mensagem: "Um equipamento foi deixado fora do lugar.\nO que deseja fazer?",
+    opcoes: [
+      { texto: "Guardar corretamente", choiceId: "guardar_equipamento" },
+      {
+        texto: "Usar/deixar de forma inadequada",
+        choiceId: "usar_equipamento_incorretamente",
+      },
+    ],
+  },
+];
+
+const FASE2_INTERACOES = [
+  {
+    id: "fase2_lixo_01",
+    visual: "lixo",
+    label: "LIXO",
+    // Posição e raio expressos em pixels da arte original da Fase 2.
+    x: 268,
+    y: 268,
+    raioInteracao: 157,
+    titulo: "Lixo no corredor",
+    mensagem: "Há lixo no corredor.\nO que deseja fazer?",
+    opcoes: [
+      {
+        texto: "Recolher e descartar corretamente",
+        choiceId: "fase2_recolher_lixo",
+      },
+      { texto: "Ignorar", choiceId: "fase2_ignorar_lixo" },
+    ],
+  },
+  {
+    id: "fase2_liquido_01",
+    visual: "liquido",
+    label: "LÍQUIDO",
+    x: 873,
+    y: 601,
+    raioInteracao: 163,
+    titulo: "Líquido derramado",
+    mensagem: "Há líquido derramado no chão.\nIsso pode causar um acidente.",
+    opcoes: [
+      { texto: "Sinalizar e pedir ajuda", choiceId: "fase2_sinalizar_liquido" },
+      { texto: "Ignorar", choiceId: "fase2_ignorar_liquido" },
+    ],
+  },
+  {
+    id: "fase2_respeito_01",
+    visual: "respeito",
+    label: "COLEGAS",
+    x: 1437,
+    y: 314,
+    raioInteracao: 176,
+    titulo: "Respeito entre colegas",
+    mensagem: "Você percebe uma situação de desrespeito entre colegas.",
+    opcoes: [
+      {
+        texto: "Buscar ajuda / agir de forma responsável",
+        choiceId: "fase2_ajudar_colega",
+      },
+      { texto: "Ignorar", choiceId: "fase2_ignorar_desrespeito" },
+    ],
+  },
+];
+
+const FASE3_INTERACOES = [
+  {
+    id: "fase3_maquina_01",
+    // Coordenadas em pixels da arte original da Fase 3 (1877 × 838).
+    x: 1450,
+    y: 275,
+    raioInteracao: 150,
+    titulo: "Máquina e procedimento",
+    mensagem: "A máquina está pronta para a atividade.\nO que deseja fazer?",
+    opcoes: [
+      {
+        texto: "Seguir o procedimento correto",
+        choiceId: "fase3_seguir_procedimento",
+      },
+      {
+        texto: "Usar de forma inadequada",
+        choiceId: "fase3_usar_maquina_incorretamente",
+      },
+    ],
+  },
+  {
+    id: "fase3_risco_01",
+    x: 240,
+    y: 614,
+    raioInteracao: 150,
+    titulo: "Uma proposta arriscada",
+    mensagem:
+      "Um colega propõe usar o equipamento\nde uma maneira arriscada.\nO que deseja fazer?",
+    opcoes: [
+      {
+        texto: "Recusar e alertar sobre o risco",
+        choiceId: "fase3_recusar_risco",
+      },
+      { texto: "Aceitar a proposta", choiceId: "fase3_aceitar_risco" },
+    ],
+  },
+  {
+    id: "fase3_professor_01",
+    x: 1005,
+    y: 350,
+    raioInteracao: 125,
+    titulo: "Orientação do responsável",
+    mensagem:
+      "O professor/laboratorista orienta como\nutilizar o equipamento com segurança.\nO que deseja fazer?",
+    opcoes: [
+      {
+        texto: "Respeitar a orientação",
+        choiceId: "fase3_respeitar_orientacao",
+      },
+      {
+        texto: "Ignorar/desrespeitar a orientação",
+        choiceId: "fase3_desrespeitar_orientacao",
+      },
+    ],
+  },
+];
+
+export const FASE1_CONFIG = {
+  numeroFase: 1,
+  titulo: "FASE 1",
+  nome: "Laboratório",
+  sceneKey: "Stage1Scene",
+  statusPadrao: "disponivel",
+  cabecalho: "FASE 1  •  LABORATÓRIO",
+  objetivo: "cuide do laboratório",
+  porta: { x: 1130, y: 265, raioInteracao: 50 },
+  mensagemConclusao: "Você analisou todas as situações do laboratório.",
+  jogadorInicial: { x: 230, y: 380 },
+  sala: {
+    // Limites da área de piso caminhável na arte do laboratório.
+    x: 95,
+    y: 239,
+    width: 1090,
+    height: 405,
+  },
+  interacoesObrigatorias: ["computador_01", "lixo_01", "equipamento_01"],
+  interacoes: FASE1_INTERACOES,
+};
+
+export const FASE2_CONFIG = {
+  numeroFase: 2,
+  titulo: "FASE 2",
+  nome: "Corredor depois do intervalo",
+  sceneKey: "Stage2Scene",
+  statusPadrao: "bloqueada",
+  cabecalho: "FASE 2  •  CORREDOR DEPOIS DO INTERVALO",
+  porta: { x: 840, y: 265, raioInteracao: 50 },
+  objetivo: "ajude a tornar o corredor seguro",
+  mensagemConclusao: "Você analisou todas as situações do corredor.",
+  // Coordenadas em pixels da arte original; Stage2Scene as converte ao mundo.
+  jogadorInicial: { x: 300, y: 562 },
+  sala: {
+    backgroundColor: 0x254052,
+    gridColor: 0x3a6371,
+    borderColor: 0x8ad9cf,
+    destaque: "CORREDOR\nSEGURO",
+    destaqueX: 180,
+    destaqueY: 255,
+    linhasHorizontais: true,
+  },
+  interacoesObrigatorias: [
+    "fase2_lixo_01",
+    "fase2_liquido_01",
+    "fase2_respeito_01",
+  ],
+  interacoes: FASE2_INTERACOES,
+};
+
+export const FASE3_CONFIG = {
+  numeroFase: 3,
+  titulo: "FASE 3",
+  nome: "Máquina e responsabilidade",
+  sceneKey: "Stage3Scene",
+  statusPadrao: "bloqueada",
+  cabecalho: "FASE 3  •  MÁQUINA E RESPONSABILIDADE",
+  objetivo: "use os equipamentos com responsabilidade",
+  tituloConclusao: "FASE CONCLUÍDA",
+  porta: { x: 200, y: 260, raioInteracao: 50 },
+  mensagemConclusao: "Você concluiu a última etapa da campanha.",
+  botaoConclusao: "FINALIZAR CAMPANHA",
+  exibirDanos: true,
+  // Coordenadas em pixels da arte original; Stage3Scene converte ao mundo.
+  jogadorInicial: { x: 810, y: 665 },
+  sala: {},
+  interacoesObrigatorias: [
+    "fase3_maquina_01",
+    "fase3_risco_01",
+    "fase3_professor_01",
+  ],
+  interacoes: FASE3_INTERACOES,
+};
+
+export const STAGE_CONFIGS = {
+  1: FASE1_CONFIG,
+  2: FASE2_CONFIG,
+  3: FASE3_CONFIG,
+};
+
+export const LISTA_FASES = Object.values(STAGE_CONFIGS);
+
+export function obterConfiguracaoFase(numeroFase) {
+  return STAGE_CONFIGS[numeroFase] || null;
+}
