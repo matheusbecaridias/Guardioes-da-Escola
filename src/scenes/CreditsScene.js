@@ -12,7 +12,7 @@ export class CreditsScene extends InfoSceneBase {
           body: [
             "ABNER REPELEVICZ - Front-End",
             "DORIVAL JUNIOR - Banco de Dados",
-            "EDSON AHARA - Product Owner",
+            "EDSON HARA - Product Owner",
             "LUCAS CAMACHO - Cliente",
             "MATHEUS BECARI - Scrum Master",
             "ROSY LOIRA - Back-End\n",
