@@ -42,8 +42,7 @@
 - [Arquitetura](#-arquitetura)
 - [Roadmap](#-roadmap)
 - [Créditos](#-créditos)
-- [Contribuição](#-contribuição)
-- [Avisos](#-avisos)
+- [Licença](#-Licença)
 
 ---
 
@@ -273,7 +272,7 @@ guardioes-da-escola/
 │   └── assets/
 │       ├── audio/          # Músicas e sons
 │       ├── fonts/          # Tipografia
-│       └── images/         # Sprites, cenários e elementos visuais
+│       └── images/         # Sprites, cenários e elementos visuais.
 ├── src/
 │   ├── data/               # Dados, configurações e perfis
 │   ├── entities/           # Entidades do jogo e movimentação
@@ -353,7 +352,7 @@ O projeto é identificado como um trabalho de caráter acadêmico.
 
 ## 📄 Licença
 
-[Licensa](LICENSE)
+[Licença](LICENSE)
 
 <div align="center">
 
