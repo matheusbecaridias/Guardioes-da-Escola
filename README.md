@@ -364,5 +364,7 @@ O projeto é identificado como um trabalho de caráter acadêmico.
 <a href="https://matheusbecaridias.github.io/Game/">
   <img src="https://img.shields.io/badge/▶_JOGAR_ONLINE-Guardiões_da_Escola-167D4A?style=for-the-badge" alt="Jogar online">
 </a>
-
+  <a href="https://github.com/matheusbecaridias/Guardioes-da-Escola/releases/download/1.0.0/Guardioes.da.Escola.AppImage">
+    <img src="https://img.shields.io/badge/▶_BAIXAR_O_JOGO-For_Linux-167D4A?style=for-the-badge" alt="Baixar Guardiões da Escola para Linux">
+  </a>
 </div>
