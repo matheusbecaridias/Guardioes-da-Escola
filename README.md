@@ -227,10 +227,8 @@ Os comandos podem variar conforme a tela e o contexto da interação.
 
 ```bash
 git clone https://github.com/matheusbecaridias/Guardioes-da-Escola.git
-cd guardioes-da-escola
+cd Guardioes-da-Escola
 ```
-
-> Substitua `URL_DO_REPOSITORIO_PRINCIPAL` pelo endereço deste repositório de código-fonte. O endereço de jogo online informado neste README é a publicação da versão compilada, não o clone do projeto-fonte.
 
 ### 2. Instale as dependências
 
@@ -344,7 +342,7 @@ O projeto é identificado como um trabalho de caráter acadêmico.
   - **[ABNER](https://github.com/wicz-ui)** - Front-End,
   - **[DORIVAL](https://github.com/silvajuniordorival-eng)** - Banco de Dados,
   - **[EDSON](https://github.com/EdysPsy)** - Product Owner,
-  - **[LUCAS]()** - Cliente,
+  - **[LUCAS]** - Cliente,
   - **[MATHEUS](https://github.com/matheusbecaridias)** - Scrum Master,
   - **[ROSY LOIRA](https://github.com/souzarosimari-jpg)** - Back-End.
 - **Instituição:**  CEEP Professora Maria do Rosário Castaldi.
