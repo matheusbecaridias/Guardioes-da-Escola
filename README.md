@@ -13,7 +13,7 @@
     <img src="https://img.shields.io/badge/▶_JOGAR_ONLINE-Acessar_o_jogo-167D4A?style=for-the-badge" alt="Jogar Guardiões da Escola online">
   </a>
     <a href="[https://matheusbecaridias.github.io/Game/](https://github.com/matheusbecaridias/Guardioes-da-Escola/releases/download/1.0.0/Guardioes.da.Escola.AppImage)">
-    <img src="https://img.shields.io/badge//▶_BAIXAR_O_GAME-For_Linux-167D4A?style=for-the-badge" alt="Jogar Guardiões da Escola online">
+    <img src="https://img.shields.io/badge//▶_BAIXAR_O_JOGO-For_Linux-167D4A?style=for-the-badge" alt="Baixar Guardiões da Escola para Linux">
   </a>
   <a href="#-sobre-o-projeto">
     <img src="https://img.shields.io/badge/Conhecer-o_projeto-17365D?style=for-the-badge" alt="Conhecer o projeto">
