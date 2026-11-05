@@ -306,7 +306,7 @@ export class CharacterSelectScene extends Phaser.Scene {
         0,
         this.nome ? `JOGADOR 1  •  ${this.nome}` : "JOGADOR 1",
         pixelTextStyle({
-          fontSize: "15px",
+          fontSize: "20px",
           align: "center",
           wordWrap: {
             width: this.safeArea.width * 0.76,
@@ -328,7 +328,7 @@ export class CharacterSelectScene extends Phaser.Scene {
         0,
         "ESCOLHA UM\nRETRATO",
         pixelTextStyle({
-          fontSize: "16px",
+          fontSize: "20px",
           align: "center",
           lineSpacing: 2,
         }),
@@ -367,7 +367,7 @@ export class CharacterSelectScene extends Phaser.Scene {
         0,
         "Escolha um retrato na grade.",
         pixelTextStyle({
-          fontSize: "12px",
+          fontSize: "20px",
           align: "center",
           wordWrap: {
             width: this.safeArea.width * 0.58,
@@ -386,7 +386,7 @@ export class CharacterSelectScene extends Phaser.Scene {
       label: "CONFIRMAR",
       color: "blue",
       width: BUTTON_WIDTH,
-      fontSize: "17px",
+      fontSize: "20px",
       onClick: () => this.confirmar(),
     }).setDepth(8);
 
@@ -396,7 +396,7 @@ export class CharacterSelectScene extends Phaser.Scene {
       label: "VOLTAR",
       color: "pink",
       width: BUTTON_WIDTH,
-      fontSize: "17px",
+      fontSize: "20px",
       onClick: () => this.voltar(),
     }).setDepth(8);
 

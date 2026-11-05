@@ -66,7 +66,7 @@ export class HUD {
         82,
         "",
         pixelTextStyle({
-          fontSize: "18px",
+          fontSize: "20px",
           wordWrap: { width: 700, useAdvancedWrap: true },
         }),
       )
@@ -107,7 +107,7 @@ export class HUD {
           0,
           "FASES",
           pixelTextStyle({
-            fontSize: "17px",
+            fontSize: "20px",
             align: "center",
           }),
         )

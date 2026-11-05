@@ -128,7 +128,7 @@ export class StageSelectScene extends Phaser.Scene {
           pixelTextStyle(
             {
               color: "#9ff5b5",
-              fontSize: "18px",
+              fontSize: "20px",
               align: "center",
               wordWrap: { width: 1000 },
             },
@@ -164,7 +164,7 @@ export class StageSelectScene extends Phaser.Scene {
         pixelTextStyle(
           {
             color: this.aviso ? "#ffcf9f" : "#c6e9ee",
-            fontSize: "18px",
+            fontSize: "20px",
             align: "center",
             wordWrap: { width: 960 },
           },
@@ -262,7 +262,7 @@ export class StageSelectScene extends Phaser.Scene {
         263,
         fase.nome,
         pixelTextStyle({
-          fontSize: "18px",
+          fontSize: "20px",
           align: "center",
           wordWrap: { width: 280 },
         }),
@@ -276,7 +276,7 @@ export class StageSelectScene extends Phaser.Scene {
         pixelTextStyle(
           {
             color: status.cor,
-            fontSize: "17px",
+            fontSize: "20px",
             align: "center",
             wordWrap: { width: 280 },
           },
@@ -322,7 +322,7 @@ export class StageSelectScene extends Phaser.Scene {
         429,
         detalhe,
         pixelTextStyle({
-          fontSize: "15px",
+          fontSize: "20px",
           align: "center",
           wordWrap: { width: 278 },
         }),

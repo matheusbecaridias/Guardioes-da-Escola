@@ -169,7 +169,7 @@ export class ProfileScene extends Phaser.Scene {
         282,
         "Digite seu nome e continue para escolher um retrato.",
         pixelTextStyle({
-          fontSize: "16px",
+          fontSize: "20px",
           align: "center",
           wordWrap: { width: 520, useAdvancedWrap: true },
         }),
@@ -199,7 +199,7 @@ export class ProfileScene extends Phaser.Scene {
         555,
         "Selecione um perfil salvo ou crie um novo.",
         pixelTextStyle({
-          fontSize: "14px",
+          fontSize: "20px",
           align: "center",
           wordWrap: { width: 520 },
         }),
@@ -455,7 +455,7 @@ export class ProfileScene extends Phaser.Scene {
         0,
         `${perfil.nome}\nCuidado ${perfil.pontuacao.cuidado}  •  Conduta ${perfil.pontuacao.conduta}`,
         pixelTextStyle({
-          fontSize: "16px",
+          fontSize: "20px",
           align: "center",
           wordWrap: { width: largura - 28 },
         }),

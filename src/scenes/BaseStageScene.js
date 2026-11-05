@@ -150,7 +150,7 @@ export class BaseStageScene extends Phaser.Scene {
         685,
         "WASD/setas: mover • toque/clique: caminhar e interagir • E: interagir",
         pixelTextStyle({
-          fontSize: "18px",
+          fontSize: "20px",
           align: "center",
           wordWrap: { width: 1120, useAdvancedWrap: true },
         }),
@@ -348,7 +348,7 @@ export class BaseStageScene extends Phaser.Scene {
         salaConfig.destaqueY || 255,
         salaConfig.destaque || "",
         pixelTextStyle({
-          fontSize: "18px",
+          fontSize: "20px",
           align: "center",
           fontStyle: "bold",
         }),
@@ -434,7 +434,7 @@ export class BaseStageScene extends Phaser.Scene {
           12,
           "MATERIAL",
           pixelTextStyle({
-            fontSize: "15px",
+            fontSize: "20px",
             fontStyle: "bold",
           }),
         )
@@ -459,7 +459,7 @@ export class BaseStageScene extends Phaser.Scene {
           -50,
           "ATENÇÃO",
           pixelTextStyle({
-            fontSize: "12px",
+            fontSize: "20px",
             fontStyle: "bold",
           }),
         )
@@ -505,7 +505,7 @@ export class BaseStageScene extends Phaser.Scene {
           -83,
           "ORIENTAÇÃO",
           pixelTextStyle({
-            fontSize: "13px",
+            fontSize: "20px",
             fontStyle: "bold",
           }),
         )
@@ -556,7 +556,7 @@ export class BaseStageScene extends Phaser.Scene {
         pixelTextStyle(
           {
             color: "#9ff5b5",
-            fontSize: "16px",
+            fontSize: "20px",
             fontStyle: "bold",
           },
           { preservarCor: true },

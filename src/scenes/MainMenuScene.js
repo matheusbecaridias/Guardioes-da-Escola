@@ -5,7 +5,7 @@ import { pixelTextStyle } from "../ui/TextStyles.js";
 import { SoundService } from "../services/SoundService.js";
 
 const IMAGENS_MENU = {
-  QRcode: "assets/images/QRcode.svg",
+  QRcode: "assets/images/QRcode.png",
   logo: "assets/images/BannerLogo.png",
   novoJogo: "assets/images/BotaoNovoJogo",
   continuar: "assets/images/BotaoContinuar",
@@ -64,22 +64,22 @@ export class MainMenuScene extends Phaser.Scene {
       window.innerWidth < 800;
 
     if (!ehMobile) {
-      const posX = 1148;
-      const posY = 700;
+      const posX = 1135;
+      const posY = 585;
 
       const qrContainer = this.add.container(posX, posY).setDepth(10);
 
       const qrcode = this.add.image(0, 0, "menu-QRcode");
-      this.ajustarImagem(qrcode, 480, 480);
+      this.ajustarImagem(qrcode, 280, 280);
 
       const textoQR = this.add
         .text(
           0,
-          -240,
+          -145,
           "JOGUE NO CELULAR",
           pixelTextStyle(
             {
-              fontSize: "18px",
+              fontSize: "20px",
               color: "#ffffff",
               stroke: "#000000",
               strokeThickness: 18,
@@ -101,8 +101,8 @@ export class MainMenuScene extends Phaser.Scene {
 
       const textoTelaCheia = this.add
         .text(
-          -1040,
-          -650,
+          -1060,
+          -550,
           " APERTE F11 \n PARA JOGAR EM \n TELA CHEIA",
           pixelTextStyle(
             {
@@ -238,7 +238,7 @@ export class MainMenuScene extends Phaser.Scene {
         height - 28,
         mensagem,
         pixelTextStyle({
-          fontSize: "16px",
+          fontSize: "20px",
           align: "center",
         }),
       )

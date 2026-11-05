@@ -163,7 +163,7 @@ export const FASE1_CONFIG = {
   statusPadrao: "disponivel",
   cabecalho: "FASE 1  •  LABORATÓRIO",
   objetivo: "cuide do laboratório",
-  porta: { x: 1130, y: 265, raioInteracao: 50 },
+  porta: { x: 1130, y: 240, raioInteracao: 55 },
   mensagemConclusao: "Você analisou todas as situações do laboratório.",
   jogadorInicial: { x: 230, y: 380 },
   sala: {
@@ -184,7 +184,7 @@ export const FASE2_CONFIG = {
   sceneKey: "Stage2Scene",
   statusPadrao: "bloqueada",
   cabecalho: "FASE 2  •  CORREDOR DEPOIS DO INTERVALO",
-  porta: { x: 840, y: 265, raioInteracao: 50 },
+  porta: { x: 830, y: 230, raioInteracao: 55 },
   objetivo: "ajude a tornar o corredor seguro",
   mensagemConclusao: "Você analisou todas as situações do corredor.",
   // Coordenadas em pixels da arte original; Stage2Scene as converte ao mundo.
@@ -215,7 +215,7 @@ export const FASE3_CONFIG = {
   cabecalho: "FASE 3  •  MÁQUINA E RESPONSABILIDADE",
   objetivo: "use os equipamentos com responsabilidade",
   tituloConclusao: "FASE CONCLUÍDA",
-  porta: { x: 200, y: 260, raioInteracao: 50 },
+  porta: { x: 180, y: 240, raioInteracao: 40 },
   mensagemConclusao: "Você concluiu a última etapa da campanha.",
   botaoConclusao: "FINALIZAR CAMPANHA",
   exibirDanos: true,

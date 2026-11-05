@@ -13,7 +13,7 @@ export const FASE3_AREA_CAMINHAVEL = Object.freeze({
 export const FASE3_COLISOES_FIXAS = Object.freeze([
   // Armários, bancadas e equipamentos fixos junto às paredes.
   { id: "armarios-esquerda", x: 25, y: 258, width: 74, height: 360 },
-  { id: "vaso-esquerdo", x: 184, y: 189, width: 77, height: 57 },
+  { id: "vaso-esquerdo", x: 184, y: 189, width: 57, height: 40 },
   { id: "bancada-ferramentas", x: 383, y: 84, width: 234, height: 178 },
   { id: "banqueta-bancada-ferramentas", x: 463, y: 220, width: 68, height: 77 },
   { id: "armarios-centrais", x: 940, y: 94, width: 166, height: 155 },
