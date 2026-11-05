@@ -55,8 +55,6 @@ Ao longo da campanha, o jogador explora diferentes espaços da escola e enfrenta
 
 > **O objetivo não é apenas concluir fases:** é perceber como pequenas atitudes individuais podem afetar toda a comunidade escolar.
 
-O projeto está em construção. O README descreve os recursos identificados na versão atual e poderá ser atualizado conforme novas funcionalidades forem desenvolvidas.
-
 ## 🕹️ Jogue online
 
 <div align="center">
@@ -96,7 +94,38 @@ O projeto está em construção. O README descreve os recursos identificados na 
 
 </div>
 
-> Para acrescentar novas imagens, coloque-as em `docs/images/` e referencie-as com caminhos relativos, por exemplo: `![Gameplay](docs/images/gameplay-fase-1.png)`.
+<div align="center">
+
+<img src="docs/images/selecao-player.png" alt="Tela de seleção de personagens" width="85%">
+
+<sub>Tela de seleção de personagens.</sub>
+
+</div>
+
+<div align="center">
+
+<img src="docs/images/gameplay-fase-1.png" alt="Tela da fase 1 - Laboratório" width="85%">
+
+<sub>Tela da fase 1 - Laboratório.</sub>
+
+</div>
+
+<div align="center">
+
+<img src="docs/images/gameplay-fase-2.png" alt="Tela da fase 2 - Corredor" width="85%">
+
+<sub>Tela da fase 2 - Corredor.</sub>
+
+</div>
+
+<div align="center">
+
+<img src="docs/images/gameplay-fase-3.png" alt="Tela da fase 3 - Laboratório 2" width="85%">
+
+<sub>Tela da fase 3 - Laboratório 2.</sub>
+
+</div>
+
 
 ## 🎮 Gameplay e campanha
 
@@ -198,7 +227,7 @@ Os comandos podem variar conforme a tela e o contexto da interação.
 ### 1. Clone o repositório
 
 ```bash
-git clone URL_DO_REPOSITORIO_PRINCIPAL
+git clone https://github.com/matheusbecaridias/Guardioes-da-Escola.git
 cd guardioes-da-escola
 ```
 
@@ -324,24 +353,7 @@ O projeto é identificado como um trabalho de caráter acadêmico.
 
 ## 📄 Licença
 
-**A licença do código-fonte ainda precisa ser definida e incluída no repositório.**
-
-Até que exista um arquivo `LICENSE` e uma decisão explícita dos responsáveis, não presuma que o código ou os assets estejam liberados para reutilização, modificação ou redistribuição.
-
-## 🤝 Contribuição
-
-O projeto está em construção. Sugestões, identificação de problemas e propostas de melhoria podem ser organizadas por meio das Issues do repositório principal, quando esse recurso estiver habilitado.
-
-Antes de contribuir, consulte as instruções específicas do projeto, caso seja criado um arquivo `CONTRIBUTING.md`.
-
-## ⚠️ Avisos
-
-- Este repositório principal deve conter o projeto completo e seu código-fonte.
-- A página [Jogar online](https://matheusbecaridias.github.io/Game/) disponibiliza a versão publicada/compilada do jogo.
-- O progresso é armazenado localmente no navegador por `localStorage`; portanto, não se deve presumir sincronização automática entre dispositivos ou navegadores.
-- O projeto está em desenvolvimento e pode receber alterações de mecânicas, conteúdo, interface e arquitetura.
-
----
+[Licensa](LICENSE)
 
 <div align="center">
 
